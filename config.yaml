@@ -29,6 +29,7 @@ path_mapping:
 cors:
   allowed_origins:
     - "http://127.0.0.1:6274"
+    - "http://127.0.0.1:6274"
   allowed_methods:
     - "GET"
     - "POST"
