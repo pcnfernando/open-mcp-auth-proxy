@@ -28,7 +28,7 @@ path_mapping:
 # CORS configuration
 cors:
   allowed_origins:
-    - "http://localhost:5173"
+    - "http://127.0.0.1:6274"
   allowed_methods:
     - "GET"
     - "POST"
