@@ -58,7 +58,7 @@ ENV HOME=/tmp/app-tmp \
     CHOREO_APP_URL=""
 
 # Switch to non-root user
-USER 10014:10014
+USER 10014 
 
 # Set working directory
 WORKDIR /app
