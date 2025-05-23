@@ -12,7 +12,7 @@ paths:
   messages: "/messages/" # Messages endpoint path
 
 # Transport mode configuration
-transport_mode: "sse" # Options: "sse" or "stdio"
+transport_mode: "stdio" # Options: "sse" or "stdio"
 
 # stdio-specific configuration (used only when transport_mode is "stdio")
 stdio:
