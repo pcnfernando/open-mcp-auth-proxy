@@ -27,8 +27,14 @@ func main() {
 
 	logger.SetDebug(*debugMode)
 
-	// 1. Load config
-	cfg, err := config.LoadConfig("config.yaml")
+	// 1. Load config - check for CONFIG_FILE environment variable
+	configPath := os.Getenv("CONFIG_FILE")
+	if configPath == "" {
+		configPath = "config.yaml" // Default fallback
+	}
+
+	logger.Info("Loading config from: %s", configPath)
+	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		logger.Error("Error loading config: %v", err)
 		os.Exit(1)
@@ -58,7 +64,7 @@ func main() {
 			logger.Warn("%v", err)
 			logger.Warn("Subprocess may fail to start due to missing dependencies")
 		}
-    
+
 		procManager = subprocess.NewManager()
 		if err := procManager.Start(cfg); err != nil {
 			logger.Warn("Failed to start subprocess: %v", err)
