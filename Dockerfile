@@ -55,22 +55,25 @@ RUN mkdir -p /tmp/app \
 COPY --from=builder --chown=10500:10500 /app/openmcpauthproxy /tmp/app/openmcpauthproxy
 COPY --chown=10500:10500 config.yaml /tmp/app/config.yaml
 
-# Copy nginx and supervisor configurations
+# Update config.yaml to use port 8081 for the Go app
+RUN sed -i 's/listen_port: 8080/listen_port: 8081/' /tmp/app/config.yaml
+
+# Copy nginx configuration and startup script
 COPY --chown=root:root nginx.conf /etc/nginx/nginx.conf
-COPY --chown=root:root supervisord.conf /tmp/supervisord.conf
+COPY --chown=10500:10500 start.sh /usr/local/bin/start.sh
 
-# Expose the nginx port
-EXPOSE 80
+# Make startup script executable
+RUN chmod +x /usr/local/bin/start.sh
 
-# Switch to the non-root user
+# Expose the nginx port (now 8080, not 80)
+EXPOSE 8080
+
+# Explicitly set the user to 10500 (like the reference)
 USER 10500
-
-# Set working directory to writable location
-WORKDIR /tmp/app
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
-# Start supervisor with config from writable location
-CMD ["/usr/bin/supervisord", "-c", "/tmp/supervisord.conf"]
+# Start with the custom script (container starts as root, script handles user switching)
+CMD ["/usr/local/bin/start.sh"]
