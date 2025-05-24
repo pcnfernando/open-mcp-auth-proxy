@@ -84,7 +84,7 @@ NGINX_PID=$!
 
 # Start the auth proxy on port 8081
 echo "Starting auth proxy..."
-cd /tmp/app && ./openmcpauthproxy --demo &
+cd /tmp/app && ./openmcpauthproxy --demo --debug &
 PROXY_PID=$!
 
 # Wait for either process to exit
