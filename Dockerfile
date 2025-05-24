@@ -25,6 +25,7 @@ RUN apk add --no-cache nodejs npm ca-certificates tzdata wget supervisor && \
     adduser -u 10500 -G appgroup -s /bin/sh -D appuser
 
 # Create all necessary directories in /tmp for readonly filesystem
+# Note: These will be recreated by the startup script to ensure they exist
 RUN mkdir -p /tmp/app \
              /tmp/app-home \
              /tmp/app-tmp \

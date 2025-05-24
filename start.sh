@@ -1,6 +1,8 @@
 #!/bin/sh
-# Create nginx temp directories with proper permissions
+# Create all necessary directories first
+mkdir -p /tmp/app /tmp/app-home /tmp/app-tmp /tmp/app-tmp/.npm
 mkdir -p /tmp/nginx-temp/client_temp /tmp/nginx-temp/proxy_temp /tmp/nginx-temp/fastcgi_temp /tmp/nginx-temp/uwsgi_temp /tmp/nginx-temp/scgi_temp
+mkdir -p /tmp/nginx-logs /tmp/supervisor-logs /tmp/run
 
 # Set environment variables for the auth proxy
 export HOME="/tmp/app-home"
