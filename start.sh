@@ -2,7 +2,7 @@
 # Create all necessary directories first
 mkdir -p /tmp/app /tmp/app-home /tmp/app-tmp /tmp/app-tmp/.npm
 mkdir -p /tmp/nginx-temp/client_temp /tmp/nginx-temp/proxy_temp /tmp/nginx-temp/fastcgi_temp /tmp/nginx-temp/uwsgi_temp /tmp/nginx-temp/scgi_temp
-mkdir -p /tmp/nginx-logs /tmp/supervisor-logs /tmp/run
+mkdir -p /tmp/run
 
 # Ensure binary is available in /tmp/app
 if [ ! -f /tmp/app/openmcpauthproxy ]; then
@@ -78,14 +78,26 @@ export NPM_CONFIG_CACHE="/tmp/app-tmp/.npm"
 export CONFIG_FILE="/tmp/app/config.yaml"
 export EXTERNAL_HOST="https://1abe8483-9db5-4f7b-a457-787c98ad6593-dev.e1-us-east-azure.choreoapis.dev"
 
-# Start nginx in background (runs on port 8080, doesn't need root)
+echo "Starting nginx and auth proxy..."
+
+# Start nginx in foreground with stdout/stderr logging
 nginx -g "daemon off;" &
 NGINX_PID=$!
 
-# Start the auth proxy on port 8081
-echo "Starting auth proxy..."
-cd /tmp/app && ./openmcpauthproxy --demo --debug &
+# Start the auth proxy on port 8081 in foreground
+cd /tmp/app && ./openmcpauthproxy --demo &
 PROXY_PID=$!
+
+# Function to handle shutdown
+shutdown() {
+    echo "Shutting down services..."
+    kill $NGINX_PID 2>/dev/null
+    kill $PROXY_PID 2>/dev/null
+    wait
+}
+
+# Trap signals
+trap shutdown TERM INT
 
 # Wait for either process to exit
 wait $NGINX_PID $PROXY_PID
