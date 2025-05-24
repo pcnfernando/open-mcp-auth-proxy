@@ -25,8 +25,8 @@ port: 8000
 timeout_seconds: 10
 
 paths:
-  sse: "/sse"
-  messages: "/messages/"
+  sse: "/my-integrations/auth-proxy-service/v1.0/sse"
+  messages: "/my-integrations/auth-proxy-service/v1.0/messages/"
 
 transport_mode: "stdio"
 
@@ -37,17 +37,23 @@ stdio:
 
 cors:
   allowed_origins:
+    - "https://1abe8483-9db5-4f7b-a457-787c98ad6593-dev.e1-us-east-azure.choreoapis.dev"
     - "http://127.0.0.1:6274"
     - "http://127.0.0.1:6274/"
+    - "http://localhost:5173"
+    - "*"
   allowed_methods:
     - "GET"
     - "POST"
     - "PUT"
     - "DELETE"
+    - "OPTIONS"
   allowed_headers:
     - "Authorization"
     - "Content-Type"
     - "mcp-protocol-version"
+    - "Origin"
+    - "Accept"
   allow_credentials: true
 
 demo:
