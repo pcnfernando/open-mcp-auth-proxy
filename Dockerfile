@@ -1,75 +1,76 @@
-# Multi-stage build for Open MCP Auth Proxy
-# Build stage
+# Multi-stage build for Open MCP Auth Proxy with Nginx
 FROM golang:1.21-alpine AS builder
 
-# Install git for go mod download
 RUN apk add --no-cache git
 
-# Set working directory
 WORKDIR /app
-
-# Copy go mod files
 COPY go.mod go.sum ./
-
-# Download dependencies
 RUN go mod download
 
-# Copy source code
 COPY . .
-
-# Build the application
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-w -s" \
     -o openmcpauthproxy \
     ./cmd/proxy
 
-# Runtime stage
-FROM node:20-alpine
+# Runtime stage with nginx
+FROM nginx:alpine
 
-# Install ca-certificates, create non-root user, and install global npm packages
-RUN apk --no-cache add ca-certificates tzdata wget && \
-    addgroup -g 10014 appgroup && \
-    adduser -u 10014 -G appgroup -s /bin/sh -D appuser && \
+# Install Node.js and create user in the 10000-20000 range
+RUN apk add --no-cache nodejs npm ca-certificates tzdata wget supervisor && \
     npm install -g supergateway \
         @modelcontextprotocol/server-filesystem \
-        @modelcontextprotocol/server-github
+        @modelcontextprotocol/server-github && \
+    addgroup -g 10500 appgroup && \
+    adduser -u 10500 -G appgroup -s /bin/sh -D appuser
 
-# Create necessary directories with proper permissions
-RUN mkdir -p /app /tmp/app-tmp /tmp/app-tmp/.npm && \
-    chown -R 10014:10014 /app /tmp/app-tmp && \
-    chmod -R 755 /app
+# Create all necessary directories in /tmp for readonly filesystem
+RUN mkdir -p /tmp/app \
+             /tmp/app-home \
+             /tmp/app-tmp \
+             /tmp/app-tmp/.npm \
+             /tmp/nginx-cache \
+             /tmp/nginx-temp \
+             /tmp/nginx-logs \
+             /tmp/supervisor-logs \
+             /tmp/run && \
+    chown -R 10500:10500 /tmp/app \
+                         /tmp/app-home \
+                         /tmp/app-tmp \
+                         /tmp/nginx-cache \
+                         /tmp/nginx-temp \
+                         /tmp/nginx-logs \
+                         /tmp/supervisor-logs \
+                         /tmp/run && \
+    chmod -R 755 /tmp/app \
+                 /tmp/app-home \
+                 /tmp/app-tmp \
+                 /tmp/nginx-cache \
+                 /tmp/nginx-temp \
+                 /tmp/nginx-logs \
+                 /tmp/supervisor-logs \
+                 /tmp/run
 
-# Copy the binary from builder stage
-COPY --from=builder --chown=10014:10014 /app/openmcpauthproxy /app/openmcpauthproxy
+# Copy the Go binary and config to /tmp (writable location)
+COPY --from=builder --chown=10500:10500 /app/openmcpauthproxy /tmp/app/openmcpauthproxy
+COPY --chown=10500:10500 config.yaml /tmp/app/config.yaml
 
-# Copy config file to working directory (app expects config.yaml in current dir)
-COPY --chown=10014:10014 config.yaml /app/config.yaml
+# Copy nginx and supervisor configurations
+COPY --chown=root:root nginx.conf /etc/nginx/nginx.conf
+COPY --chown=root:root supervisord.conf /tmp/supervisord.conf
 
-# Set environment variables
-ENV HOME=/tmp/app-tmp \
-    TMPDIR=/tmp/app-tmp \
-    PATH="/app:${PATH}" \
-    NODE_PATH=/usr/local/lib/node_modules \
-    NPM_CONFIG_CACHE=/tmp/app-tmp/.npm \
-    CONFIG_FILE=/app/config.yaml \
-    EXTERNAL_HOST="https://4e898286-2b6d-4a63-a5a6-5192df899ef1.e1-us-east-azure.choreoapps.dev" \
-    PUBLIC_HOST="" \
-    ADVERTISED_HOST="" \
-    INGRESS_HOST="" \
-    CHOREO_APP_URL=""
+# Expose the nginx port
+EXPOSE 80
 
-# Switch to non-root user
-USER 10014
+# Switch to the non-root user
+USER 10500
 
-# Set working directory
-WORKDIR /app
-
-# Expose the default port
-EXPOSE 8080
+# Set working directory to writable location
+WORKDIR /tmp/app
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/.well-known/oauth-authorization-server || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost/health || exit 1
 
-# Default command - can be overridden with different flags
-CMD ["./openmcpauthproxy", "--demo"]
+# Start supervisor with config from writable location
+CMD ["/usr/bin/supervisord", "-c", "/tmp/supervisord.conf"]
