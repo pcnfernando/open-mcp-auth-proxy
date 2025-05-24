@@ -25,8 +25,8 @@ port: 8000
 timeout_seconds: 10
 
 paths:
-  sse: "/my-integrations/auth-proxy-service/v1.0/sse"
-  messages: "/my-integrations/auth-proxy-service/v1.0/messages/"
+  sse: "/sse"
+  messages: "/messages/"
 
 transport_mode: "stdio"
 
