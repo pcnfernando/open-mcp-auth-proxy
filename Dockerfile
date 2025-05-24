@@ -52,12 +52,16 @@ RUN mkdir -p /tmp/app \
                  /tmp/supervisor-logs \
                  /tmp/run
 
-# Copy the Go binary and config to /tmp (writable location)
+# Copy the Go binary and config to multiple locations for reliability
 COPY --from=builder --chown=10500:10500 /app/openmcpauthproxy /tmp/app/openmcpauthproxy
+COPY --from=builder --chown=10500:10500 /app/openmcpauthproxy /usr/local/bin/openmcpauthproxy
 COPY --chown=10500:10500 config.yaml /tmp/app/config.yaml
+COPY --chown=10500:10500 config.yaml /tmp/config.yaml
 
-# Update config.yaml to use port 8081 for the Go app
-RUN sed -i 's/listen_port: 8080/listen_port: 8081/' /tmp/app/config.yaml
+# Update config.yaml to use port 8081 for the Go app  
+RUN sed -i 's/listen_port: 8080/listen_port: 8081/' /tmp/app/config.yaml && \
+    sed -i 's/listen_port: 8080/listen_port: 8081/' /tmp/config.yaml && \
+    chmod +x /usr/local/bin/openmcpauthproxy
 
 # Copy nginx configuration and startup script
 COPY --chown=root:root nginx.conf /etc/nginx/nginx.conf
