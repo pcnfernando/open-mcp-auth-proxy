@@ -81,7 +81,7 @@ export HOME="/tmp/app-home"
 export TMPDIR="/tmp/app-tmp"
 export NODE_PATH="/usr/local/lib/node_modules"
 export NPM_CONFIG_CACHE="/tmp/app-tmp/.npm"
-export CONFIG_FILE="/tmp/app/config.yaml"
+export CONFIG_FILE="/app/config.yaml"
 export EXTERNAL_HOST="https://1abe8483-9db5-4f7b-a457-787c98ad6593-dev.e1-us-east-azure.choreoapis.dev"
 
 echo "Environment variables set:"
