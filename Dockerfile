@@ -18,7 +18,7 @@ FROM nginx:alpine
 
 # Install Node.js and create user in the 10000-20000 range
 RUN apk add --no-cache nodejs npm ca-certificates tzdata wget supervisor && \
-    npm install -g supergateway \
+    npm install -g @pcnfernando/supergateway \
         @modelcontextprotocol/server-filesystem \
         @modelcontextprotocol/server-github && \
     addgroup -g 10500 appgroup && \

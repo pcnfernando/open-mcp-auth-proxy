@@ -19,15 +19,15 @@ const (
 
 // Common path configuration for all transport modes
 type PathsConfig struct {
-	SSE       string `yaml:"sse"`
-	Messages  string `yaml:"messages"`
+	SSE      string `yaml:"sse"`
+	Messages string `yaml:"messages"`
 }
 
 // StdioConfig contains stdio-specific configuration
 type StdioConfig struct {
 	Enabled     bool     `yaml:"enabled"`
-	UserCommand string   `yaml:"user_command"` // The command provided by the user
-	WorkDir     string   `yaml:"work_dir"`     // Working directory (optional)
+	UserCommand string   `yaml:"user_command"`   // The command provided by the user
+	WorkDir     string   `yaml:"work_dir"`       // Working directory (optional)
 	Args        []string `yaml:"args,omitempty"` // Additional arguments
 	Env         []string `yaml:"env,omitempty"`  // Environment variables
 }
@@ -85,18 +85,18 @@ type DefaultConfig struct {
 }
 
 type Config struct {
-	AuthServerBaseURL  string
-	ListenPort         int           `yaml:"listen_port"`
-	BaseURL            string        `yaml:"base_url"`
-	Port               int           `yaml:"port"`
-	JWKSURL            string
-	TimeoutSeconds     int               `yaml:"timeout_seconds"`
-	PathMapping        map[string]string `yaml:"path_mapping"`
-	Mode               string            `yaml:"mode"`
-	CORSConfig         CORSConfig        `yaml:"cors"`
-	TransportMode      TransportMode     `yaml:"transport_mode"`
-	Paths              PathsConfig       `yaml:"paths"`
-	Stdio              StdioConfig       `yaml:"stdio"`
+	AuthServerBaseURL string
+	ListenPort        int    `yaml:"listen_port"`
+	BaseURL           string `yaml:"base_url"`
+	Port              int    `yaml:"port"`
+	JWKSURL           string
+	TimeoutSeconds    int               `yaml:"timeout_seconds"`
+	PathMapping       map[string]string `yaml:"path_mapping"`
+	Mode              string            `yaml:"mode"`
+	CORSConfig        CORSConfig        `yaml:"cors"`
+	TransportMode     TransportMode     `yaml:"transport_mode"`
+	Paths             PathsConfig       `yaml:"paths"`
+	Stdio             StdioConfig       `yaml:"stdio"`
 
 	// Nested config for Asgardeo
 	Demo     DemoConfig     `yaml:"demo"`
@@ -147,18 +147,17 @@ func (c *Config) BuildExecCommand() string {
 		return ""
 	}
 
-
 	if runtime.GOOS == "windows" {
 		// For Windows, we need to properly escape the inner command
 		escapedCommand := strings.ReplaceAll(c.Stdio.UserCommand, `"`, `\"`)
 		return fmt.Sprintf(
-			`npx -y supergateway --stdio "%s" --port %d --baseUrl %s --ssePath %s --messagePath %s`,
+			`npx -y @pcnfernando/supergateway --stdio "%s" --port %d --baseUrl %s --ssePath %s --messagePath %s`,
 			escapedCommand, c.Port, c.BaseURL, c.Paths.SSE, c.Paths.Messages,
 		)
 	}
 
 	return fmt.Sprintf(
-		`npx -y supergateway --stdio "%s" --port %d --baseUrl %s --ssePath %s --messagePath %s`,
+		`npx -y @pcnfernando/supergateway --stdio "%s" --port %d --baseUrl %s --ssePath %s --messagePath %s`,
 		c.Stdio.UserCommand, c.Port, c.BaseURL, c.Paths.SSE, c.Paths.Messages,
 	)
 }
@@ -176,12 +175,12 @@ func LoadConfig(path string) (*Config, error) {
 	if err := decoder.Decode(&cfg); err != nil {
 		return nil, err
 	}
-	
+
 	// Set default values
 	if cfg.TimeoutSeconds == 0 {
 		cfg.TimeoutSeconds = 15 // default
 	}
-	
+
 	// Set default transport mode if not specified
 	if cfg.TransportMode == "" {
 		cfg.TransportMode = SSETransport // Default to SSE
@@ -191,11 +190,11 @@ func LoadConfig(path string) (*Config, error) {
 	if cfg.Port == 0 {
 		cfg.Port = 8000 // default
 	}
-	
+
 	// Validate the configuration
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
-	
+
 	return &cfg, nil
 }
