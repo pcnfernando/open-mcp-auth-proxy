@@ -54,9 +54,9 @@ func getExternalBaseURL(r *http.Request) string {
 
 	// For containerized environments, check for external host environment variable
 	// This allows setting the advertised host via environment variables
-	if externalHost := getExternalHostFromEnv(); externalHost != "" {
-		host = externalHost
-	}
+	// if externalHost := getExternalHostFromEnv(); externalHost != "" {
+	// 	host = externalHost
+	// }
 
 	return scheme + "://" + host
 }
