@@ -6,13 +6,14 @@ import (
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
 	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
+	"github.com/wso2/open-mcp-auth-proxy/internal/util"
 )
 
 type defaultProvider struct {
 	cfg *config.Config
 }
 
-// NewDefaultProvider initializes a Provider for Asgardeo (demo mode).
+// NewDefaultProvider initializes a Provider for default OAuth providers.
 func NewDefaultProvider(cfg *config.Config) Provider {
 	return &defaultProvider{cfg: cfg}
 }
@@ -40,19 +41,9 @@ func (p *defaultProvider) WellKnownHandler() http.HandlerFunc {
 				// Use configured response values
 				responseConfig := pathConfig.Response
 
-				// Get current host for proxy endpoints
-				scheme := "http"
-				if r.TLS != nil {
-					scheme = "https"
-				}
-				if forwardedProto := r.Header.Get("X-Forwarded-Proto"); forwardedProto != "" {
-					scheme = forwardedProto
-				}
-				host := r.Host
-				if forwardedHost := r.Header.Get("X-Forwarded-Host"); forwardedHost != "" {
-					host = forwardedHost
-				}
-				baseURL := scheme + "://" + host
+				// Get current base URL using EXTERNAL_HOST priority
+				baseURL := util.GetExternalBaseURL(r)
+				logger.Info("Using base URL for OAuth endpoints: %s", baseURL)
 
 				authorizationEndpoint := responseConfig.AuthorizationEndpoint
 				if authorizationEndpoint == "" {
@@ -62,9 +53,9 @@ func (p *defaultProvider) WellKnownHandler() http.HandlerFunc {
 				if tokenEndpoint == "" {
 					tokenEndpoint = baseURL + "/token"
 				}
-				registraionEndpoint := responseConfig.RegistrationEndpoint
-				if registraionEndpoint == "" {
-					registraionEndpoint = baseURL + "/register"
+				registrationEndpoint := responseConfig.RegistrationEndpoint
+				if registrationEndpoint == "" {
+					registrationEndpoint = baseURL + "/register"
 				}
 
 				// Build response from config
@@ -76,7 +67,7 @@ func (p *defaultProvider) WellKnownHandler() http.HandlerFunc {
 					"response_types_supported":              responseConfig.ResponseTypesSupported,
 					"grant_types_supported":                 responseConfig.GrantTypesSupported,
 					"token_endpoint_auth_methods_supported": []string{"client_secret_basic"},
-					"registration_endpoint":                 registraionEndpoint,
+					"registration_endpoint":                 registrationEndpoint,
 					"code_challenge_methods_supported":      responseConfig.CodeChallengeMethodsSupported,
 				}
 

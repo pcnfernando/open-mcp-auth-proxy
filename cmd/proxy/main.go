@@ -40,6 +40,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Set global config for utility functions
+	util.SetGlobalConfig(cfg)
+
 	// Override transport mode if stdio flag is set
 	if *stdioMode {
 		cfg.TransportMode = config.StdioTransport
@@ -55,6 +58,11 @@ func main() {
 	logger.Info("Using transport mode: %s", cfg.TransportMode)
 	logger.Info("Using MCP server base URL: %s", cfg.BaseURL)
 	logger.Info("Using MCP paths: SSE=%s, Messages=%s", cfg.Paths.SSE, cfg.Paths.Messages)
+	
+	// Log external host configuration
+	if externalHost := cfg.GetExternalHost(); externalHost != "" {
+		logger.Info("Using external host: %s", externalHost)
+	}
 
 	// 2. Start subprocess if configured and in stdio mode
 	var procManager *subprocess.Manager

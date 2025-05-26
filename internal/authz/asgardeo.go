@@ -9,12 +9,12 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
 	logger "github.com/wso2/open-mcp-auth-proxy/internal/logging"
+	"github.com/wso2/open-mcp-auth-proxy/internal/util"
 )
 
 type asgardeoProvider struct {
@@ -24,68 +24,6 @@ type asgardeoProvider struct {
 // NewAsgardeoProvider initializes a Provider for Asgardeo.
 func NewAsgardeoProvider(cfg *config.Config) Provider {
 	return &asgardeoProvider{cfg: cfg}
-}
-
-// getExternalBaseURL determines the external URL that clients use to reach this service
-func getExternalBaseURL(r *http.Request) string {
-	scheme := "http"
-	if r.TLS != nil {
-		scheme = "https"
-	}
-
-	// Check for forwarded protocol headers (from load balancers/proxies)
-	if forwardedProto := r.Header.Get("X-Forwarded-Proto"); forwardedProto != "" {
-		scheme = forwardedProto
-	}
-	if forwardedProto := r.Header.Get("X-Forwarded-Scheme"); forwardedProto != "" {
-		scheme = forwardedProto
-	}
-
-	// Determine the host
-	host := r.Host
-
-	// Check for forwarded host headers (from load balancers/proxies)
-	if forwardedHost := r.Header.Get("X-Forwarded-Host"); forwardedHost != "" {
-		host = forwardedHost
-	}
-	if originalHost := r.Header.Get("X-Original-Host"); originalHost != "" {
-		host = originalHost
-	}
-
-	// For containerized environments, check for external host environment variable
-	// This allows setting the advertised host via environment variables
-	if externalHost := getExternalHostFromEnv(); externalHost != "" {
-		host = externalHost
-	}
-
-	return scheme + "://" + host
-}
-
-// getExternalHostFromEnv checks for environment variables that specify the external host
-func getExternalHostFromEnv() string {
-	// Check common environment variables used in containerized environments
-	envVars := []string{
-		"EXTERNAL_HOST",
-		"PUBLIC_HOST",
-		"ADVERTISED_HOST",
-		"INGRESS_HOST",
-		"CHOREO_APP_URL", // Choreo-specific
-	}
-
-	for _, envVar := range envVars {
-		if value := os.Getenv(envVar); value != "" {
-			// Remove protocol if included
-			if strings.HasPrefix(value, "http://") {
-				value = strings.TrimPrefix(value, "http://")
-			}
-			if strings.HasPrefix(value, "https://") {
-				value = strings.TrimPrefix(value, "https://")
-			}
-			return value
-		}
-	}
-
-	return ""
 }
 
 func (p *asgardeoProvider) WellKnownHandler() http.HandlerFunc {
@@ -106,7 +44,8 @@ func (p *asgardeoProvider) WellKnownHandler() http.HandlerFunc {
 		}
 
 		// Use the external base URL that clients can actually reach
-		baseURL := getExternalBaseURL(r)
+		baseURL := util.GetExternalBaseURL(r)
+		logger.Info("Using base URL for OAuth endpoints: %s", baseURL)
 
 		issuer := strings.TrimSuffix(p.cfg.AuthServerBaseURL, "/") + "/token"
 

@@ -86,9 +86,10 @@ type DefaultConfig struct {
 
 type Config struct {
 	AuthServerBaseURL string
-	ListenPort        int    `yaml:"listen_port"`
-	BaseURL           string `yaml:"base_url"`
-	Port              int    `yaml:"port"`
+	ListenPort        int               `yaml:"listen_port"`
+	BaseURL           string            `yaml:"base_url"`
+	Port              int               `yaml:"port"`
+	ExternalHost      string            `yaml:"external_host"`      // New field for external host configuration
 	JWKSURL           string
 	TimeoutSeconds    int               `yaml:"timeout_seconds"`
 	PathMapping       map[string]string `yaml:"path_mapping"`
@@ -102,6 +103,16 @@ type Config struct {
 	Demo     DemoConfig     `yaml:"demo"`
 	Asgardeo AsgardeoConfig `yaml:"asgardeo"`
 	Default  DefaultConfig  `yaml:"default"`
+}
+
+// GetExternalHost returns the external host with environment variable taking precedence
+func (c *Config) GetExternalHost() string {
+	// Environment variable takes precedence
+	if envHost := os.Getenv("EXTERNAL_HOST"); envHost != "" {
+		return envHost
+	}
+	// Fallback to config file value
+	return c.ExternalHost
 }
 
 // Validate checks if the config is valid based on transport mode

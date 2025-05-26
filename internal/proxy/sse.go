@@ -11,6 +11,7 @@ import (
 	"time"
 	
 	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
+	"github.com/wso2/open-mcp-auth-proxy/internal/util"
 )
 
 // HandleSSE sets up a go-routine to wait for context cancellation
@@ -60,6 +61,9 @@ func (t *sseTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	
 	logger.Info("Intercepting SSE response to modify endpoint events")
 	
+	// Determine the actual proxy host to use (considering EXTERNAL_HOST)
+	actualProxyHost := util.GetExternalHost(t.proxyHost)
+	
 	// Create a response wrapper that modifies the response body
 	originalBody := resp.Body
 	pr, pw := io.Pipe()
@@ -83,7 +87,7 @@ func (t *sseTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 						
 						// Replace the host in the endpoint
 						logger.Debug("Original endpoint: %s", endpoint)
-						endpoint = strings.Replace(endpoint, t.targetHost, t.proxyHost, 1)
+						endpoint = strings.Replace(endpoint, t.targetHost, actualProxyHost, 1)
 						logger.Debug("Modified endpoint: %s", endpoint)
 						
 						// Write the modified event lines
