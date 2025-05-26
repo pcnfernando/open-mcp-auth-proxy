@@ -151,13 +151,13 @@ func (c *Config) BuildExecCommand() string {
 		// For Windows, we need to properly escape the inner command
 		escapedCommand := strings.ReplaceAll(c.Stdio.UserCommand, `"`, `\"`)
 		return fmt.Sprintf(
-			`npx -y @pcnfernando/supergateway --stdio "%s" --port %d --baseUrl %s --ssePath %s --messagePath %s`,
+			`npx -y @pcnfernando/supergateway --stdio --header X-Accel-Buffering:no "%s" --port %d --baseUrl %s --ssePath %s --messagePath %s`,
 			escapedCommand, c.Port, c.BaseURL, c.Paths.SSE, c.Paths.Messages,
 		)
 	}
 
 	return fmt.Sprintf(
-		`npx -y @pcnfernando/supergateway --stdio "%s" --port %d --baseUrl %s --ssePath %s --messagePath %s`,
+		`npx -y @pcnfernando/supergateway --stdio --header X-Accel-Buffering:no "%s" --port %d --baseUrl %s --ssePath %s --messagePath %s`,
 		c.Stdio.UserCommand, c.Port, c.BaseURL, c.Paths.SSE, c.Paths.Messages,
 	)
 }
