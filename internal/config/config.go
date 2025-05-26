@@ -89,7 +89,7 @@ type Config struct {
 	ListenPort        int               `yaml:"listen_port"`
 	BaseURL           string            `yaml:"base_url"`
 	Port              int               `yaml:"port"`
-	ExternalHost      string            `yaml:"external_host"`      // New field for external host configuration
+	ExternalHost      string            `yaml:"external_host"` 
 	JWKSURL           string
 	TimeoutSeconds    int               `yaml:"timeout_seconds"`
 	PathMapping       map[string]string `yaml:"path_mapping"`

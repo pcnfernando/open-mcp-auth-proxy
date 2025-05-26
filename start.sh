@@ -76,7 +76,7 @@ export HOME="/tmp/app-home"
 export TMPDIR="/tmp/app-tmp"
 export NODE_PATH="/usr/local/lib/node_modules"
 export NPM_CONFIG_CACHE="/tmp/app-tmp/.npm"
-export CONFIG_FILE="/tmp/app/config.yaml"
+export CONFIG_FILE="/app/config.yaml"
 
 # Use environment variable for external host if provided
 if [ ! -z "$EXTERNAL_HOST" ]; then
