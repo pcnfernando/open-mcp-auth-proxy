@@ -236,6 +236,7 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 			w.Header().Set("X-Accel-Buffering", "no")
 			w.Header().Set("Cache-Control", "no-cache")
 			w.Header().Set("Connection", "keep-alive")
+			w.Header().Set("Content-Type", "text/event-stream")
 			
 			// Keep SSE connections open
 			HandleSSE(w, r, rp)
