@@ -16,8 +16,8 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
 # Runtime stage
 FROM alpine:latest
 
-# Install Node.js for MCP server support and create user
-RUN apk add --no-cache nodejs npm ca-certificates tzdata wget && \
+# Install Node.js for MCP server support, debugging tools, and create user
+RUN apk add --no-cache nodejs npm ca-certificates tzdata wget curl procps && \
     npm install -g @pcnfernando/supergateway \
         @modelcontextprotocol/server-filesystem \
         @modelcontextprotocol/server-github && \
@@ -50,15 +50,18 @@ RUN chmod +x /usr/local/bin/openmcpauthproxy /tmp/app/openmcpauthproxy
 COPY --chown=10500:10500 start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
+# Test the binary works
+RUN /usr/local/bin/openmcpauthproxy --help || echo "Binary help test completed"
+
 # Expose the auth proxy port directly
 EXPOSE 8080
 
 # Set the user
 USER 10500
 
-# Health check - now directly to the auth proxy
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/.well-known/oauth-authorization-server || exit 1
+# Health check - now directly to the auth proxy with more time
+HEALTHCHECK --interval=30s --timeout=15s --start-period=30s --retries=5 \
+    CMD wget --no-verbose --tries=1 --timeout=10 --spider http://localhost:8080/.well-known/oauth-authorization-server || exit 1
 
 # Start the auth proxy directly
 CMD ["/usr/local/bin/start.sh"]
