@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 	
+	"github.com/wso2/open-mcp-auth-proxy/internal/config"
 	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
 	"github.com/wso2/open-mcp-auth-proxy/internal/util"
 )
@@ -44,6 +45,7 @@ type sseTransport struct {
 	Transport  http.RoundTripper
 	proxyHost  string
 	targetHost string
+	config     *config.Config
 }
 
 func (t *sseTransport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -70,9 +72,15 @@ func (t *sseTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	
 	go func() {
 		defer originalBody.Close()
-		defer pw.Close()
+		defer func() {
+			if err := pw.Close(); err != nil {
+				logger.Debug("Error closing pipe writer: %v", err)
+			}
+		}()
 		
 		scanner := bufio.NewScanner(originalBody)
+		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+		
 		for scanner.Scan() {
 			line := scanner.Text()
 			
@@ -85,21 +93,28 @@ func (t *sseTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 						// Extract the endpoint URL
 						endpoint := strings.TrimPrefix(dataLine, "data: ")
 						
-						// Replace the host in the endpoint
-						logger.Debug("Original endpoint: %s", endpoint)
-						endpoint = strings.Replace(endpoint, t.targetHost, actualProxyHost, 1)
-						logger.Debug("Modified endpoint: %s", endpoint)
+						// Rewrite the endpoint to use proxy paths
+						modifiedEndpoint := t.rewriteEndpoint(endpoint, actualProxyHost)
 						
 						// Write the modified event lines
-						fmt.Fprintln(pw, line)
-						fmt.Fprintln(pw, "data: "+endpoint)
+						if _, err := fmt.Fprintln(pw, line); err != nil {
+							logger.Error("Error writing event line: %v", err)
+							return
+						}
+						if _, err := fmt.Fprintln(pw, "data: "+modifiedEndpoint); err != nil {
+							logger.Error("Error writing data line: %v", err)
+							return
+						}
 						continue
 					}
 				}
 			}
 			
 			// Write the original line for non-endpoint events
-			fmt.Fprintln(pw, line)
+			if _, err := fmt.Fprintln(pw, line); err != nil {
+				logger.Error("Error writing line: %v", err)
+				return
+			}
 		}
 		
 		if err := scanner.Err(); err != nil {
@@ -110,4 +125,61 @@ func (t *sseTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Replace the response body with our modified pipe
 	resp.Body = pr
 	return resp, nil
+}
+
+// rewriteEndpoint rewrites endpoint URLs to use generic proxy paths
+func (t *sseTransport) rewriteEndpoint(endpoint, proxyHost string) string {
+	// Add nil check for config
+	if t.config == nil {
+		logger.Error("Config is nil in sseTransport")
+		return endpoint
+	}
+	
+	// If the endpoint is already a full URL, parse and modify it
+	if strings.HasPrefix(endpoint, "http://") || strings.HasPrefix(endpoint, "https://") {
+		// For full URLs, replace the host part
+		if strings.Contains(endpoint, t.targetHost) {
+			return strings.Replace(endpoint, t.targetHost, proxyHost, 1)
+		}
+		return endpoint
+	}
+	
+	// For relative URLs from MCP server, rewrite to generic proxy paths
+	// Extract just the query parameters if any
+	var queryParams string
+	if idx := strings.Index(endpoint, "?"); idx != -1 {
+		queryParams = endpoint[idx:]
+	}
+	
+	// Map remote MCP server paths to configured proxy paths
+	// SSE "endpoint" events contain the message endpoint URL
+	proxyPath := t.config.Paths.Messages
+	
+	// Determine the protocol based on the proxy host
+	protocol := "http" // Default to HTTP for localhost
+	cleanProxyHost := proxyHost
+	
+	// Check if proxyHost already includes protocol
+	if strings.HasPrefix(proxyHost, "http://") {
+		protocol = "http"
+		cleanProxyHost = strings.TrimPrefix(proxyHost, "http://")
+	} else if strings.HasPrefix(proxyHost, "https://") {
+		protocol = "https"
+		cleanProxyHost = strings.TrimPrefix(proxyHost, "https://")
+	} else {
+		// For bare hostnames, determine protocol based on the host
+		if strings.HasPrefix(cleanProxyHost, "localhost") || strings.HasPrefix(cleanProxyHost, "127.0.0.1") {
+			protocol = "http" // Use HTTP for localhost
+		} else {
+			protocol = "https" // Use HTTPS for external hosts
+		}
+	}
+	
+	// Remove trailing slash from host to avoid double slashes
+	cleanProxyHost = strings.TrimSuffix(cleanProxyHost, "/")
+	
+	// Construct the full proxy URL with configured path
+	result := fmt.Sprintf("%s://%s%s%s", protocol, cleanProxyHost, proxyPath, queryParams)
+	logger.Debug("Endpoint rewrite: %s -> %s", endpoint, result)
+	return result
 }

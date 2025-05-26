@@ -235,6 +235,7 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 				Transport:  http.DefaultTransport,
 				proxyHost:  r.Host,
 				targetHost: targetURL.Host,
+				config:     cfg,
 			}
 
 			// Set SSE-specific headers BEFORE proxying
@@ -242,7 +243,6 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 			w.Header().Set("X-Accel-Buffering", "no")
 			w.Header().Set("Cache-Control", "no-cache")
 			w.Header().Set("Connection", "keep-alive")
-
 
 			// Keep SSE connections open
 			HandleSSE(w, r, rp)
