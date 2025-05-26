@@ -1,4 +1,4 @@
-# Multi-stage build for Open MCP Auth Proxy with Nginx
+# Multi-stage build for Open MCP Auth Proxy
 FROM golang:1.21-alpine AS builder
 
 RUN apk add --no-cache git
@@ -13,68 +13,52 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -o openmcpauthproxy \
     ./cmd/proxy
 
-# Runtime stage with nginx
-FROM nginx:alpine
+# Runtime stage
+FROM alpine:latest
 
-# Install Node.js and create user in the 10000-20000 range
-RUN apk add --no-cache nodejs npm ca-certificates tzdata wget supervisor && \
+# Install Node.js for MCP server support and create user
+RUN apk add --no-cache nodejs npm ca-certificates tzdata wget && \
     npm install -g @pcnfernando/supergateway \
         @modelcontextprotocol/server-filesystem \
         @modelcontextprotocol/server-github && \
     addgroup -g 10500 appgroup && \
     adduser -u 10500 -G appgroup -s /bin/sh -D appuser
 
-# Create all necessary directories in /tmp for readonly filesystem
-# Note: These will be recreated by the startup script to ensure they exist
+# Create necessary directories
 RUN mkdir -p /tmp/app \
              /tmp/app-home \
              /tmp/app-tmp \
              /tmp/app-tmp/.npm \
-             /tmp/nginx-cache \
-             /tmp/nginx-temp \
-             /tmp/nginx-logs \
-             /tmp/supervisor-logs \
-             /tmp/run && \
+             /tmp/logs && \
     chown -R 10500:10500 /tmp/app \
                          /tmp/app-home \
                          /tmp/app-tmp \
-                         /tmp/nginx-cache \
-                         /tmp/nginx-temp \
-                         /tmp/nginx-logs \
-                         /tmp/supervisor-logs \
-                         /tmp/run && \
+                         /tmp/logs && \
     chmod -R 755 /tmp/app \
                  /tmp/app-home \
                  /tmp/app-tmp \
-                 /tmp/nginx-cache \
-                 /tmp/nginx-temp \
-                 /tmp/nginx-logs \
-                 /tmp/supervisor-logs \
-                 /tmp/run
+                 /tmp/logs
 
-# Copy the Go binary to multiple locations for reliability
+# Copy the Go binary
 COPY --from=builder --chown=10500:10500 /app/openmcpauthproxy /tmp/app/openmcpauthproxy
 COPY --from=builder --chown=10500:10500 /app/openmcpauthproxy /usr/local/bin/openmcpauthproxy
 
 # Make binary executable
 RUN chmod +x /usr/local/bin/openmcpauthproxy /tmp/app/openmcpauthproxy
 
-# Copy nginx configuration and startup script
-COPY --chown=root:root nginx.conf /etc/nginx/nginx.conf
+# Copy startup script
 COPY --chown=10500:10500 start.sh /usr/local/bin/start.sh
-
-# Make startup script executable
 RUN chmod +x /usr/local/bin/start.sh
 
-# Expose the nginx port (now 8080, not 80)
+# Expose the auth proxy port directly
 EXPOSE 8080
 
-# Explicitly set the user to 10500 (like the reference)
+# Set the user
 USER 10500
 
-# Health check
+# Health check - now directly to the auth proxy
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/.well-known/oauth-authorization-server || exit 1
 
-# Start with the custom script (container starts as root, script handles user switching)
+# Start the auth proxy directly
 CMD ["/usr/local/bin/start.sh"]
