@@ -210,6 +210,11 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 
 				req.Header = cleanHeaders
 
+				// Ensure X-Accel-Buffering header is set for SSE requests
+				if isSSE {
+					req.Header.Set("X-Accel-Buffering", "no")
+				}
+
 				logger.Debug("%s -> %s%s", r.URL.Path, req.URL.Host, req.URL.Path)
 			},
 			ModifyResponse: func(resp *http.Response) error {
@@ -232,11 +237,12 @@ func buildProxyHandler(cfg *config.Config, modifiers map[string]RequestModifier)
 				targetHost: targetURL.Host,
 			}
 
-			// Set SSE-specific headers
+			// Set SSE-specific headers BEFORE proxying
+			// This ensures they are sent to the client regardless of upstream response
 			w.Header().Set("X-Accel-Buffering", "no")
 			w.Header().Set("Cache-Control", "no-cache")
 			w.Header().Set("Connection", "keep-alive")
-			w.Header().Set("Content-Type", "text/event-stream")
+
 
 			// Keep SSE connections open
 			HandleSSE(w, r, rp)
