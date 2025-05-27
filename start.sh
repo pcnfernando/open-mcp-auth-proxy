@@ -6,70 +6,9 @@ echo "=== Starting Open MCP Auth Proxy ==="
 # Create necessary directories
 mkdir -p /tmp/app /tmp/app-home /tmp/app-tmp /tmp/app-tmp/.npm /tmp/logs
 
-echo "Created directory structure"
-
-# Ensure binary is available in /tmp/app
-if [ ! -f /tmp/app/openmcpauthproxy ]; then
-    echo "Copying auth proxy binary to /tmp/app/"
-    if [ -f /usr/local/bin/openmcpauthproxy ]; then
-        cp /usr/local/bin/openmcpauthproxy /tmp/app/
-    else
-        echo "Error: openmcpauthproxy binary not found!"
-        exit 1
-    fi
-fi
-
-# Ensure config is available - create default if not found
-if [ ! -f /tmp/app/config.yaml ]; then
-    echo "Creating default config in /tmp/app/"
-    cat > /tmp/app/config.yaml << 'EOF'
-listen_port: 8080
-base_url: "http://localhost:8000"
-port: 8000
-timeout_seconds: 10
-
-paths:
-  sse: "/sse"
-  messages: "/messages/"
-
-transport_mode: "stdio"
-
-stdio:
-  enabled: true
-  user_command: "npx -y @modelcontextprotocol/server-github"
-  work_dir: ""
-
-cors:
-  allowed_origins:
-    - "*"
-  allowed_methods:
-    - "GET"
-    - "POST"
-    - "PUT"
-    - "DELETE"
-    - "OPTIONS"
-  allowed_headers:
-    - "Authorization"
-    - "Content-Type"
-    - "mcp-protocol-version"
-    - "Origin"
-    - "Accept"
-    - "X-Requested-With"
-  allow_credentials: true
-
-demo:
-  org_name: "openmcpauthdemo"
-  client_id: "N0U9e_NNGr9mP_0fPnPfPI0a6twa"
-  client_secret: "qFHfiBp5gNGAO9zV4YPnDofBzzfInatfUbHyPZvM0jka"
-EOF
-fi
-
 # Make sure the binary is executable
 chmod +x /tmp/app/openmcpauthproxy
 
-# Debug: List contents
-echo "Contents of /tmp/app:"
-ls -la /tmp/app/
 
 # Set environment variables for the auth proxy
 export HOME="/tmp/app-home"

@@ -86,10 +86,10 @@ type DefaultConfig struct {
 
 type Config struct {
 	AuthServerBaseURL string
-	ListenPort        int               `yaml:"listen_port"`
-	BaseURL           string            `yaml:"base_url"`
-	Port              int               `yaml:"port"`
-	ExternalHost      string            `yaml:"external_host"` 
+	ListenPort        int    `yaml:"listen_port"`
+	BaseURL           string `yaml:"base_url"`
+	Port              int    `yaml:"port"`
+	ExternalHost      string `yaml:"external_host"`
 	JWKSURL           string
 	TimeoutSeconds    int               `yaml:"timeout_seconds"`
 	PathMapping       map[string]string `yaml:"path_mapping"`
@@ -162,13 +162,13 @@ func (c *Config) BuildExecCommand() string {
 		// For Windows, we need to properly escape the inner command
 		escapedCommand := strings.ReplaceAll(c.Stdio.UserCommand, `"`, `\"`)
 		return fmt.Sprintf(
-			`npx -y @pcnfernando/supergateway --header X-Accel-Buffering:no --stdio "%s" --port %d --baseUrl %s --ssePath %s --messagePath %s`,
+			`npx -y supergateway --header X-Accel-Buffering:no --stdio "%s" --port %d --baseUrl %s --ssePath %s --messagePath %s`,
 			escapedCommand, c.Port, c.BaseURL, c.Paths.SSE, c.Paths.Messages,
 		)
 	}
 
 	return fmt.Sprintf(
-		`npx -y @pcnfernando/supergateway --header X-Accel-Buffering:no --stdio "%s" --port %d --baseUrl %s --ssePath %s --messagePath %s`,
+		`npx -y supergateway --header X-Accel-Buffering:no --stdio "%s" --port %d --baseUrl %s --ssePath %s --messagePath %s`,
 		c.Stdio.UserCommand, c.Port, c.BaseURL, c.Paths.SSE, c.Paths.Messages,
 	)
 }

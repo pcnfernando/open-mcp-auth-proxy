@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/wso2/open-mcp-auth-proxy/internal/config"
-	"github.com/wso2/open-mcp-auth-proxy/internal/logging"
+	logger "github.com/wso2/open-mcp-auth-proxy/internal/logging"
 	"github.com/wso2/open-mcp-auth-proxy/internal/util"
 )
 
