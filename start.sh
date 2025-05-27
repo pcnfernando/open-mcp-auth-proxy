@@ -50,11 +50,6 @@ trap shutdown TERM INT EXIT
 
 echo "=== Starting auth proxy directly on port 8080 ==="
 
-# # Set the config file path if not already set
-# if [ -z "$CONFIG_FILE" ]; then
-#     export CONFIG_FILE="/app/config.yaml"
-# fi
-
 # Verify the binary and config exist
 if [ ! -f "/app/openmcpauthproxy" ]; then
     echo "ERROR: openmcpauthproxy binary not found at /app/openmcpauthproxy"

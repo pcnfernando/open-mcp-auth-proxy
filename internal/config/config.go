@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"net"
+	"net/url"
 	"os"
 	"runtime"
 	"strings"
@@ -115,6 +117,109 @@ func (c *Config) GetExternalHost() string {
 	return c.ExternalHost
 }
 
+// validateLocalURL ensures that the provided URL points to a local/localhost address
+// and not to a remote host for security reasons when using stdio transport mode
+func validateLocalURL(urlStr string) error {
+	if urlStr == "" {
+		return fmt.Errorf("URL cannot be empty")
+	}
+
+	// Parse the URL
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return fmt.Errorf("invalid URL format: %v", err)
+	}
+
+	// Extract hostname and port
+	hostname := parsedURL.Hostname()
+	if hostname == "" {
+		return fmt.Errorf("URL must contain a hostname")
+	}
+
+	// Check if it's a local address
+	if !isLocalAddress(hostname) {
+		return fmt.Errorf("BaseURL must point to a local address (localhost, 127.x.x.x, ::1, 0.0.0.0) when using stdio transport mode, got: %s", hostname)
+	}
+
+	return nil
+}
+
+// isLocalAddress checks if the given hostname/IP is a local address
+func isLocalAddress(hostname string) bool {
+	// Convert to lowercase for case-insensitive comparison
+	hostname = strings.ToLower(hostname)
+
+	// Check for common localhost names
+	localHostnames := []string{
+		"localhost",
+		"localhost.localdomain",
+		"local",
+	}
+
+	for _, local := range localHostnames {
+		if hostname == local {
+			return true
+		}
+	}
+
+	// Parse as IP address
+	ip := net.ParseIP(hostname)
+	if ip != nil {
+		return isLocalIP(ip)
+	}
+
+	// If it's not a valid IP, it might be a hostname that resolves to local
+	// For security, we'll be strict and only allow explicit local addresses
+	return false
+}
+
+// isLocalIP checks if the given IP address is a local/loopback address
+func isLocalIP(ip net.IP) bool {
+	// Check for IPv4 loopback (127.x.x.x)
+	if ip.IsLoopback() {
+		return true
+	}
+
+	// Check for IPv6 loopback (::1)
+	if ip.Equal(net.IPv6loopback) {
+		return true
+	}
+
+	// Check for "any" addresses (0.0.0.0 for IPv4, :: for IPv6)
+	if ip.IsUnspecified() {
+		return true
+	}
+
+	// Check for IPv4 localhost range (127.0.0.0/8)
+	if ip.To4() != nil {
+		// 127.0.0.0/8 network
+		if ip.To4()[0] == 127 {
+			return true
+		}
+	}
+
+	// Check for IPv6 localhost
+	if ip.To16() != nil {
+		// Check for ::1
+		if ip.Equal(net.ParseIP("::1")) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// validateBaseURLForTransportMode validates the BaseURL based on transport mode
+func validateBaseURLForTransportMode(baseURL string, transportMode TransportMode) error {
+	// Only validate for stdio transport mode
+	if transportMode == StdioTransport {
+		return validateLocalURL(baseURL)
+	}
+
+	// For other transport modes (like SSE), allow any URL
+	return nil
+}
+
 // Validate checks if the config is valid based on transport mode
 func (c *Config) Validate() error {
 	// Validate based on transport mode
@@ -124,6 +229,11 @@ func (c *Config) Validate() error {
 		}
 		if c.Stdio.UserCommand == "" {
 			return fmt.Errorf("stdio.user_command is required in stdio transport mode")
+		}
+
+		// Validate that BaseURL points to localhost when using stdio
+		if err := validateBaseURLForTransportMode(c.BaseURL, c.TransportMode); err != nil {
+			return fmt.Errorf("BaseURL validation failed: %v", err)
 		}
 	}
 
