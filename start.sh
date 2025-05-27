@@ -6,10 +6,6 @@ echo "=== Starting Open MCP Auth Proxy ==="
 # Create necessary directories
 mkdir -p /tmp/app /tmp/app-home /tmp/app-tmp /tmp/app-tmp/.npm /tmp/logs
 
-# Make sure the binary is executable
-chmod +x /tmp/app/openmcpauthproxy
-
-
 # Set environment variables for the auth proxy
 export HOME="/tmp/app-home"
 export TMPDIR="/tmp/app-tmp"
