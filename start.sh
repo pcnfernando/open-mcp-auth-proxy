@@ -4,10 +4,13 @@ set -e
 echo "=== Starting Open MCP Auth Proxy ==="
 
 # Set environment variables for the auth proxy
-export HOME="/tmp/app-home"
-export TMPDIR="/tmp/app-tmp"
+export HOME="/app"
+export TMPDIR="/tmp"
 export NODE_PATH="/usr/local/lib/node_modules"
-export NPM_CONFIG_CACHE="/tmp/app-tmp/.npm"
+export NPM_CONFIG_CACHE="/tmp/.npm"
+
+# Create tmpfs directories if they don't exist
+mkdir -p /tmp/.npm
 
 # Use environment variable for external host if provided
 if [ ! -z "$EXTERNAL_HOST" ]; then
@@ -17,7 +20,7 @@ fi
 
 echo "Environment variables set:"
 echo "  HOME=$HOME"
-echo "  CONFIG_FILE=${CONFIG_FILE:-not set}"
+echo "  CONFIG_FILE=${CONFIG_FILE:-/app/config.yaml}"
 echo "  EXTERNAL_HOST=${EXTERNAL_HOST:-not set}"
 
 # Function to handle shutdown - simplified to avoid double execution
@@ -47,8 +50,23 @@ trap shutdown TERM INT EXIT
 
 echo "=== Starting auth proxy directly on port 8080 ==="
 
+# # Set the config file path if not already set
+# if [ -z "$CONFIG_FILE" ]; then
+#     export CONFIG_FILE="/app/config.yaml"
+# fi
+
+# Verify the binary and config exist
+if [ ! -f "/app/openmcpauthproxy" ]; then
+    echo "ERROR: openmcpauthproxy binary not found at /app/openmcpauthproxy"
+    exit 1
+fi
+
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "WARNING: Config file not found at $CONFIG_FILE, using default"
+fi
+
 # Start the auth proxy directly on port 8080 in background
-cd /tmp/app && exec ./openmcpauthproxy --demo --debug &
+cd /app && exec ./openmcpauthproxy --demo --debug &
 PROXY_PID=$!
 echo "Auth proxy started with PID: $PROXY_PID"
 

@@ -18,42 +18,32 @@ FROM alpine:latest
 
 # Install Node.js for MCP server support, debugging tools, and create user
 RUN apk add --no-cache nodejs npm ca-certificates tzdata wget curl procps && \
-    npm install -g @pcnfernando/supergateway \
+    npm install -g supergateway \
         @modelcontextprotocol/server-filesystem \
         @modelcontextprotocol/server-github && \
     addgroup -g 10500 appgroup && \
     adduser -u 10500 -G appgroup -s /bin/sh -D appuser
 
-# Create necessary directories
-RUN mkdir -p /tmp/app \
-             /tmp/app-home \
-             /tmp/app-tmp \
-             /tmp/app-tmp/.npm \
-             /tmp/logs && \
-    chown -R 10500:10500 /tmp/app \
-                         /tmp/app-home \
-                         /tmp/app-tmp \
-                         /tmp/logs && \
-    chmod -R 755 /tmp/app \
-                 /tmp/app-home \
-                 /tmp/app-tmp \
-                 /tmp/logs
+# Create necessary directories outside of /tmp to avoid tmpfs conflicts
+RUN mkdir -p /app && \
+    chown -R 10500:10500 /app && \
+    chmod -R 755 /app
 
-# Copy the Go binary
-COPY --from=builder --chown=10500:10500 /app/openmcpauthproxy /tmp/app/openmcpauthproxy
-COPY --from=builder --chown=10500:10500 /app/openmcpauthproxy /usr/local/bin/openmcpauthproxy
+# Copy the Go binary to the app directory
+COPY --from=builder --chown=10500:10500 /app/openmcpauthproxy /app/openmcpauthproxy
 
-COPY --from=builder --chown=10500:10500 /app/config.yaml /tmp/app/config.yaml
+# Copy config to the app directory
+COPY --from=builder --chown=10500:10500 /app/config.yaml /app/config.yaml
 
 # Make binary executable
-RUN chmod +x /usr/local/bin/openmcpauthproxy /tmp/app/openmcpauthproxy
+RUN chmod +x /app/openmcpauthproxy
 
-# Copy startup script
+# Copy and update startup script
 COPY --chown=10500:10500 start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
 # Test the binary works
-RUN /usr/local/bin/openmcpauthproxy --help || echo "Binary help test completed"
+RUN /app/openmcpauthproxy --help || echo "Binary help test completed"
 
 # Expose the auth proxy port directly
 EXPOSE 8080
