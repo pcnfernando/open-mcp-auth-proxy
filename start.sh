@@ -3,15 +3,11 @@ set -e
 
 echo "=== Starting Open MCP Auth Proxy ==="
 
-# Create necessary directories
-mkdir -p /tmp/app /tmp/app-home /tmp/app-tmp /tmp/app-tmp/.npm /tmp/logs
-
 # Set environment variables for the auth proxy
 export HOME="/tmp/app-home"
 export TMPDIR="/tmp/app-tmp"
 export NODE_PATH="/usr/local/lib/node_modules"
 export NPM_CONFIG_CACHE="/tmp/app-tmp/.npm"
-export CONFIG_FILE="/app/config.yaml"
 
 # Use environment variable for external host if provided
 if [ ! -z "$EXTERNAL_HOST" ]; then
@@ -21,7 +17,7 @@ fi
 
 echo "Environment variables set:"
 echo "  HOME=$HOME"
-echo "  CONFIG_FILE=$CONFIG_FILE"
+echo "  CONFIG_FILE=${CONFIG_FILE:-not set}"
 echo "  EXTERNAL_HOST=${EXTERNAL_HOST:-not set}"
 
 # Function to handle shutdown - simplified to avoid double execution

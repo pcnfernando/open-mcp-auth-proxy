@@ -43,6 +43,8 @@ RUN mkdir -p /tmp/app \
 COPY --from=builder --chown=10500:10500 /app/openmcpauthproxy /tmp/app/openmcpauthproxy
 COPY --from=builder --chown=10500:10500 /app/openmcpauthproxy /usr/local/bin/openmcpauthproxy
 
+COPY --from=builder --chown=10500:10500 /app/config.yaml /tmp/app/config.yaml
+
 # Make binary executable
 RUN chmod +x /usr/local/bin/openmcpauthproxy /tmp/app/openmcpauthproxy
 
